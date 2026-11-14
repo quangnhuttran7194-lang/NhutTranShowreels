@@ -59,21 +59,14 @@ img,video{display:block}
 .hero-nav{position:absolute;left:var(--pad);bottom:28px;flex-direction:column;gap:6px}
 .hero-nav a{font-size:16px;color:#e6dccb}
 
-/* intro */
+/* intro: loader gọn — REC + vạch tiến trình + bộ đếm, không lặp tên, không hiện dự án */
 .intro{position:fixed;inset:0;z-index:80;background:var(--bg);overflow:hidden}
-.intro-logo{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);width:min(360px,80vw)}
-.il-row{display:flex;align-items:center;gap:10px;overflow:hidden}
-.il-row.r{justify-content:flex-end}
-.il-word{display:block;font-size:22px;font-weight:600;letter-spacing:.02em}
-.il-bar{flex:1;height:9px;background:var(--line);border-radius:9px;overflow:hidden}
-.il-bar i{display:block;height:100%;background:var(--text);transform-origin:left;transform:scaleX(0);border-radius:9px}
-.il-line{flex:1;height:1px;background:var(--muted)}
-.il-sub{font-size:9px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);margin:6px 0;line-height:1.4}
-.intro-count{position:absolute;right:var(--pad);bottom:22px;color:var(--muted)}
+.intro-c{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);width:min(360px,72vw);display:flex;align-items:center;gap:16px;color:var(--muted)}
+.intro-c .il-bar{flex:1;height:1px;background:var(--line);overflow:hidden}
+.intro-c .il-bar i{display:block;height:100%;background:var(--text);transform-origin:left;transform:scaleX(0)}
 .intro-skip{position:absolute;left:50%;bottom:22px;transform:translateX(-50%);background:none;border:1px solid var(--line);border-radius:99px;padding:7px 14px;color:var(--muted);cursor:pointer;transition:color .3s,border-color .3s}
 .intro-skip:hover{color:var(--text);border-color:var(--muted)}
-.reel{position:absolute;left:50%;top:0;width:min(34vw,500px);transform:translateX(-50%);will-change:transform}
-.reel-card{height:36vh;border-radius:12px;margin-bottom:12px}
+.hero .h-name{transform:translateY(110%)}
 
 /* hero — nền full màn, chữ giữa */
 .hero{position:relative;z-index:1;height:100vh;height:100svh;min-height:520px;overflow:hidden;background:var(--bg)}
@@ -269,7 +262,6 @@ footer button{background:none;border:0;cursor:pointer;color:var(--text)}
   .about-grid{grid-template-columns:1fr}
   .contact-cols{grid-template-columns:1fr 1fr;row-gap:28px}
   footer{padding:22px 16px 40px}
-  .reel{width:62vw}.reel-card{height:28vh}
   .lb-img,.lb-img img{max-width:94vw}
   .lb-prev,.lb-next{top:auto;bottom:60px;transform:none}
   .pj-meta{grid-template-columns:1fr 1fr 1fr;padding:0 16px;bottom:28px}
@@ -301,14 +293,9 @@ footer button{background:none;border:0;cursor:pointer;color:var(--text)}
 
 <!-- INTRO -->
 <div class="intro" id="intro">
-  <div class="reel" id="reel" aria-hidden="true"></div>
-  <div class="intro-logo" aria-hidden="true">
-    <div class="il-row"><span class="il-word">NHỰT.</span><span class="il-bar"><i></i></span></div>
-    <p class="il-sub">Director of Photography · Camera Operator · Photographer</p>
-    <div class="il-row r"><span class="il-line"></span><span class="il-word">.TRẦN</span></div>
-  </div>
+  <div class="intro-c mono" aria-hidden="true"><span><span class="dot"></span>REC</span><span class="il-bar"><i></i></span><span id="count">000</span></div>
   <button class="intro-skip ui" id="skip">Skip</button>
-  <div class="intro-count mono" id="count" aria-hidden="true">000</div>
+</div>
 </div>
 
 <!-- FIXED UI (hiện sau khi cuộn qua hero) -->
@@ -436,7 +423,7 @@ const PROJECTS = [
  {cat:'Music Video',slug:'dong-roi-tay',title:'Đông Rồi Tây',client:'The Flob',role:'DOP · Cam Op',youtube:'Zw4Q8OjCg_E'},
  {cat:'Music Video',slug:'khong-sao-ca',title:'Không Sao Cả',client:'Rtee x Hổ',role:'DOP · Cam Op',youtube:'s8sWUH6z4tA'},
  {cat:'Short',slug:'drift-xiaomi',title:'Tuyệt Tác Từ Tốc Độ',client:'Xiaomi Việt Nam',role:'DOP · Cam Op',youtube:'dmInxN8zUNo'},
- {cat:'Short',slug:'xiaomi',title:'Xiaomi Việt Nam',client:'Xiaomi Việt Nam',role:'DOP · Cam Op',url:'https://www.facebook.com/share/v/1G2MsTEzd3/'}
+ {cat:'Short',slug:'xiaomi',title:'Xiaomi Việt Nam',client:'Xiaomi Việt Nam',role:'DOP · Cam Op',url:'https://www.facebook.com/XiaomiVietnam/videos/406450762508696/'}
 ];
 
 /* Logo đã hợp tác: thêm src:'media/logos/unicef.svg' để thay chữ bằng logo thật */
@@ -489,7 +476,6 @@ function media(src,i,{label='',autoplay=false,eager=false,poster=''}={}){
 $('#heroMedia').innerHTML = media(CONFIG.heroMedia,0,{autoplay:true,eager:true,poster:CONFIG.heroPoster});
 if(!isVid(CONFIG.heroMedia)) $('#heroMedia').classList.add('kb');
 $('#portrait').innerHTML = media(CONFIG.portrait,4,{label:'Ảnh anh Nhựt — gửi sau'});
-$('#reel').innerHTML = [0,5,9,11,2].map(k=>`<div class="reel-card mf">${media(thumb(FILMS[k]),k)}</div>`).join('')+`<div class="reel-card mf" id="lastCard">${media(CONFIG.heroPoster||CONFIG.heroMedia,0)}</div>`;
 $('#nFilm').textContent=`(${FILMS.length})`; $('#nPhoto').textContent=`(${PHOTOS.length})`;
 
 $('#wkWrap').innerHTML=CATS.map(c=>{const list=FILMS.filter(p=>p.cat===c);
@@ -523,7 +509,7 @@ const t0=performance.now(), tcEl=$('#tc');
 let lastPt={x:innerWidth/2,y:innerHeight/2};
 addEventListener('pointerdown',e=>lastPt={x:e.clientX,y:e.clientY},true);
 
-if(!window.gsap){$('#intro').remove();document.body.classList.remove('is-loading');$$('.h-in').forEach(e=>e.style.opacity=1);$('#topbar').classList.add('show');}
+if(!window.gsap){$('#intro').remove();document.body.classList.remove('is-loading');$$('.h-in').forEach(e=>e.style.opacity=1);$$('.h-name').forEach(e=>e.style.transform='none');$('#topbar').classList.add('show');}
 else init();
 
 function init(){
@@ -535,33 +521,31 @@ $$('[data-scroll]').forEach(a=>a.addEventListener('click',e=>{e.preventDefault()
 $('[data-scroll-top]').onclick=()=>lenis?lenis.scrollTo(0,{duration:S(1.6)}):scrollTo({top:0,behavior:'smooth'});
 
 /* ---------- INTRO ---------- */
-const intro=$('#intro'), reel=$('#reel'), last=$('#lastCard'), frame=$('#heroBg');
+const intro=$('#intro');
 let seen=false; try{seen=CONFIG.introOncePerSession&&sessionStorage.getItem('nt-intro')==='1'}catch(e){}
 let introTl=null, introDone=false;
 function heroIn(){
-  gsap.from('.h-name',{yPercent:110,duration:S(1.4),ease:'expo.out'});
+  gsap.fromTo('.h-name',{y:0,yPercent:110},{y:0,yPercent:0,duration:S(1.4),ease:'expo.out'});
   gsap.to('.hero .h-in',{opacity:1,duration:S(1.2),delay:S(.35),stagger:.15,ease:'power2.out'});
 }
 function endIntro(){if(introDone)return;introDone=true;try{sessionStorage.setItem('nt-intro','1')}catch(e){}
-  intro.remove();gsap.set(frame,{clearProps:'clipPath'});document.body.classList.remove('is-loading');lenis?.start();heroIn();setTimeout(()=>{ScrollTrigger.refresh();routeFromHash()},0);}
+  intro?.remove();document.body.classList.remove('is-loading');lenis?.start();heroIn();setTimeout(()=>{ScrollTrigger.refresh();routeFromHash()},0);}
 lenis?.stop();
 if(reduce||!CONFIG.intro||seen){endIntro();}
 else{
-  const c={v:0},cnt=$('#count');
-  introTl=gsap.timeline({defaults:{ease:'power3.inOut'}});
-  introTl.from('.il-word',{yPercent:110,duration:S(.7),ease:'expo.out',stagger:.1})
-    .from('.il-sub,.il-line',{opacity:0,duration:S(.4)},'-=.4')
-    .to('.il-bar i',{scaleX:1,duration:S(1),ease:'power2.inOut'},'<')
-    .to(c,{v:100,duration:S(1),ease:'power2.inOut',onUpdate:()=>cnt.textContent=String(Math.round(c.v)).padStart(3,'0')},'<')
-    .to('.intro-logo,.intro-count',{opacity:0,duration:S(.25)})
-    .fromTo(reel,{y:()=>innerHeight},{y:()=>innerHeight/2-(reel.offsetHeight-12-last.offsetHeight/2),duration:S(1.1)},'-=.05')
-    .call(()=>{const r=last.getBoundingClientRect(),f=frame.getBoundingClientRect();
-      gsap.set(frame,{clipPath:`inset(${r.top-f.top}px ${f.right-r.right}px ${f.bottom-r.bottom}px ${r.left-f.left}px round 12px)`});
-      gsap.set(intro,{background:'transparent'});gsap.set([reel,'#skip'],{opacity:0});})
-    .to(frame,{clipPath:'inset(0px 0px 0px 0px round 0px)',duration:S(.9),ease:'expo.inOut'})
-    .call(endIntro,null,'-=.25');
+  /* chờ video nền sẵn sàng (tối đa ~2.6s) rồi mới mở màn — chạy đúng 1 lần */
+  const c={v:0},cnt=$('#count'),bar=$('.intro-c .il-bar i');
+  const draw=()=>{cnt.textContent=String(Math.round(c.v)).padStart(3,'0');bar.style.transform=`scaleX(${c.v/100})`};
+  const ready=new Promise(r=>{const v=$('#heroMedia video');if(!v||v.readyState>=3)return r();v.addEventListener('canplaythrough',r,{once:true});v.addEventListener('error',r,{once:true});setTimeout(r,2600)});
+  introTl=gsap.timeline();
+  introTl.to(c,{v:86,duration:S(1.1),ease:'power2.out',onUpdate:draw});
+  ready.then(()=>{if(introDone)return;introTl=gsap.timeline()
+    .to(c,{v:100,duration:S(.35),ease:'power2.inOut',onUpdate:draw})
+    .to('.intro-c,#skip',{opacity:0,duration:S(.3)})
+    .to(intro,{opacity:0,duration:S(.6),ease:'power2.inOut'})
+    .call(endIntro,null,'-=.35');});
 }
-if($('#skip'))$('#skip').onclick=()=>{introTl?.kill();gsap.set(intro,{opacity:1});gsap.to(intro,{opacity:0,duration:.4,onComplete:endIntro})};
+if($('#skip'))$('#skip').onclick=()=>{introTl?.kill();gsap.to(intro,{opacity:0,duration:.35,onComplete:endIntro})};
 
 /* ---------- HERO: giữ nền full, cuộn thì mờ dần + blur + grain dày lên ---------- */
 /* hero đứng yên (pinSpacing:false) — phần Work trượt lên phủ dần, cùng lúc nền blur + mờ */
@@ -690,7 +674,6 @@ function renderProject(p){
     </div></div>
   <div class="pj-body">
     <div class="pj-player rv">${playerHTML(p)}</div>
-    ${p.url?`<div class="pj-ext ui"><a href="${p.url}" target="_blank" rel="noopener">Xem trên Facebook ↗</a></div>`:''}
     <div class="pj-stills rv">${[0,1,2,3,4,5].map(s).join('')}</div>
     <a class="pj-next" href="#/phim/${nxt.slug}"><span class="ui muted">Dự án tiếp theo →</span><div class="t">${nxt.title}</div><div class="ui muted" style="margin-top:10px">${nxt.client} — ${nxt.cat}</div></a>
   </div>`;

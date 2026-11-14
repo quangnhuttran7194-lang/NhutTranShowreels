@@ -445,6 +445,8 @@ const PAGE = 20; // số ảnh hiện mỗi lần, bấm "Xem thêm" để tải
 
 const reduce = matchMedia('(prefers-reduced-motion: reduce)').matches;
 const canHover = matchMedia('(hover:hover) and (min-width:901px)').matches;
+// điện thoại: dùng hiệu ứng trượt lên (transform, chạy GPU) thay cho clip-path vòng tròn vốn bị giật trên Android
+const lite = matchMedia('(max-width:700px),(pointer:coarse) and (max-height:500px)').matches;
 const S = v => v*CONFIG.speed;
 const $ = s => document.querySelector(s), $$ = s => [...document.querySelectorAll(s)];
 const pad2 = n => String(n).padStart(2,'0');
@@ -654,7 +656,12 @@ gsap.from('.contact-cols>div',{opacity:0,y:20,duration:S(.9),stagger:.08,ease:'e
    PROJECT PAGE (#/phim/slug) — chỉ video + still/BTS + credits
    ===================================================================== */
 const pj=$('#project'), pjC=$('#pjContent');
-let current=null;
+let current=null, bgPlaying=[], zoomFrom=null;
+if(lite) gsap.set(pj,{clipPath:'none',opacity:0});
+function pauseBg(){bgPlaying=[...document.querySelectorAll('video')].filter(v=>!pj.contains(v)&&!v.paused);bgPlaying.forEach(v=>v.pause())}
+function resumeBg(){bgPlaying.forEach(v=>{const r=v.getBoundingClientRect();if(r.bottom>0&&r.top<innerHeight)v.play().catch(()=>{})});bgPlaying=[]}
+// nạp phần nặng (YouTube iframe, video nền) sau khi hiệu ứng mở xong
+function loadHeavy(){if(!current)return;const pl=pjC.querySelector('.pj-player');if(pl&&pl.dataset.defer){delete pl.dataset.defer;pl.innerHTML=playerHTML(current)}watchVideos(pjC)}
 const DEFAULT_CREDITS=p=>[['Client / Nghệ sĩ',p.client],['Đạo diễn','…'],['Director of Photography',p.role==='DOP'?'Nhựt Trần':'…'],['Camera Operator',p.role==='Cam Op'?'Nhựt Trần':'…'],['Gaffer','…'],['Production','…']];
 function playerHTML(p){
   if(p.youtube) return `<iframe src="https://www.youtube-nocookie.com/embed/${p.youtube}?rel=0" allow="autoplay; fullscreen; picture-in-picture" allowfullscreen title="${p.title}"></iframe>`;
@@ -666,19 +673,19 @@ function renderProject(p){
   const s=k=>`<div class="mf s${k+1}">${media(st[k],i*3+k+1,{label:(k<3?'Still ':'BTS ')+pad2(k+1)})}</div>`;
   $('#pjIdx').textContent=`${pad2(i+1)} / ${pad2(FILMS.length)}`;
   pjC.innerHTML=`
-  <div class="pj-hero"><div class="mf">${media(p.preview||thumb(p,true),i+3,{eager:true,autoplay:true,poster:thumb(p)})}</div><div class="shade"></div>
+  <div class="pj-hero"><div class="mf">${media(p.preview||thumb(p,true),i+3,{eager:true,autoplay:!lite,poster:thumb(p)})}</div><div class="shade"></div>
     <div class="pj-head"><div class="ui muted pj-a" style="margin-bottom:14px">${p.cat}</div><h1 class="pj-title"><span class="ln"><span>${p.title}</span></span></h1></div>
     <div class="pj-meta ui">
       <span class="pj-a">Client<b>${p.client}</b></span><span class="pj-a">Thể loại<b>${p.cat}</b></span>
       ${p.role?`<span class="pj-a">Vai trò<b style="color:var(--gold)">${p.role}</b></span>`:''}
     </div></div>
   <div class="pj-body">
-    <div class="pj-player rv">${playerHTML(p)}</div>
+    <div class="pj-player rv"${lite?` data-defer="1"`:''}>${lite?'':playerHTML(p)}</div>
     <div class="pj-stills rv">${[0,1,2,3,4,5].map(s).join('')}</div>
     <a class="pj-next" href="#/phim/${nxt.slug}"><span class="ui muted">Dự án tiếp theo →</span><div class="t">${nxt.title}</div><div class="ui muted" style="margin-top:10px">${nxt.client} — ${nxt.cat}</div></a>
   </div>`;
   $('#pjNextBtn').onclick=()=>goProject(nxt.slug);
-  watchVideos(pjC);
+  if(!lite) watchVideos(pjC);
   const io=new IntersectionObserver(es=>es.forEach(e=>{if(e.isIntersecting){gsap.to(e.target,{opacity:1,y:0,duration:S(1.1),ease:'expo.out'});io.unobserve(e.target)}}),{root:pj,threshold:.08});
   pjC.querySelectorAll('.rv').forEach(el=>io.observe(el));
 }
@@ -687,18 +694,38 @@ function openProject(p){
   renderProject(p); current=p; pj.scrollTop=0;
   if(!wasOpen){
     pj.classList.add('open');pj.setAttribute('aria-hidden','false');lenis?.stop();document.body.classList.add('no-scroll');
-    $('#heroMedia video')?.pause(); // trang chủ nằm phía sau — dừng cho nhẹ
+    pauseBg(); // trang chủ nằm phía sau — dừng mọi video cho nhẹ
     if(open){open=false;gsap.set(pv,{clipPath:'circle(0% at 50% 50%)'});wk.classList.remove('has-hover');}
-    gsap.fromTo(pj,{clipPath:`circle(0% at ${lastPt.x}px ${lastPt.y}px)`},{clipPath:`circle(150% at ${lastPt.x}px ${lastPt.y}px)`,duration:S(1),ease:'expo.inOut'});
-  } else gsap.fromTo(pjC,{opacity:0},{opacity:1,duration:S(.5)});
-  gsap.from(pjC.querySelectorAll('.pj-title .ln>span'),{yPercent:110,duration:S(1.2),ease:'expo.out',delay:wasOpen?0:S(.45)});
-  gsap.from(pjC.querySelectorAll('.pj-a'),{opacity:0,y:12,duration:S(.8),stagger:.06,ease:'expo.out',delay:wasOpen?.1:S(.6)});
+    if(lite){ // điện thoại: ảnh thumbnail phóng to thành ảnh đầu trang (chỉ dùng transform + opacity → mượt)
+      const th=zoomFrom, hero=pjC.querySelector('.pj-hero .mf'); zoomFrom=null;
+      gsap.set(pj,{opacity:0});
+      if(th&&hero&&th.width){
+        // chỉ animate 2 lớp nhẹ: nền màu trơn (opacity) + ảnh (transform). Trang dự án thật hiện ra ngay khi ảnh đã vào vị trí.
+        const r=hero.getBoundingClientRect(), z=document.createElement('div'), bd=document.createElement('div');
+        bd.style.cssText='position:fixed;inset:0;z-index:70;background:var(--bg);opacity:0;pointer-events:none;will-change:opacity';
+        z.style.cssText=`position:fixed;left:${r.left}px;top:${r.top}px;width:${r.width}px;height:${r.height}px;z-index:71;pointer-events:none;background:#120d0a center/cover url('${thumb(p)}');transform-origin:0 0;will-change:transform;transform:translate3d(${th.left-r.left}px,${th.top-r.top}px,0) scale(${th.width/r.width},${th.height/r.height})`;
+        document.body.append(bd,z); pj.style.visibility='hidden'; // trang thật không vẽ trong lúc ảnh đang phóng
+        requestAnimationFrame(()=>requestAnimationFrame(()=>{
+          gsap.to(bd,{opacity:1,duration:S(.5),ease:'power2.out'});
+          gsap.fromTo(z,{x:th.left-r.left,y:th.top-r.top,scaleX:th.width/r.width,scaleY:th.height/r.height},{x:0,y:0,scaleX:1,scaleY:1,duration:S(.7),ease:'expo.inOut',force3D:true,
+            onComplete:()=>{gsap.set(pj,{opacity:1,clearProps:'visibility'});requestAnimationFrame(()=>{z.remove();bd.remove();setTimeout(loadHeavy,250)})}});
+        }));
+      } else gsap.to(pj,{opacity:1,duration:S(.45),ease:'power2.out',onComplete:loadHeavy});
+    }
+    else gsap.fromTo(pj,{clipPath:`circle(0% at ${lastPt.x}px ${lastPt.y}px)`},{clipPath:`circle(150% at ${lastPt.x}px ${lastPt.y}px)`,duration:S(1),ease:'expo.inOut'});
+  } else gsap.fromTo(pjC,{opacity:0},{opacity:1,duration:S(.5),onComplete:lite?loadHeavy:null});
+  gsap.from(pjC.querySelectorAll('.pj-title .ln>span'),{yPercent:110,duration:S(1.2),ease:'expo.out',delay:wasOpen?0:S(lite?.75:.45)});
+  gsap.from(pjC.querySelectorAll('.pj-a'),{opacity:0,y:12,duration:S(.8),stagger:.06,ease:'expo.out',delay:wasOpen?.1:S(lite?.85:.6)});
 }
 function closeProject(){
   if(!pj.classList.contains('open'))return;
-  gsap.to(pj,{clipPath:'circle(0% at 50% 50%)',duration:S(.8),ease:'expo.inOut',onComplete:()=>{pj.classList.remove('open');pj.setAttribute('aria-hidden','true');pjC.innerHTML='';current=null;
-    const hv=$('#heroMedia video'); if(hv&&hv.getBoundingClientRect().bottom>0)hv.play().catch(()=>{});
-    if(!lb.classList.contains('open')){lenis?.start();document.body.classList.remove('no-scroll')}}});
+  pjC.querySelectorAll('video').forEach(v=>v.pause());
+  const done=()=>{pj.classList.remove('open');pj.setAttribute('aria-hidden','true');pjC.innerHTML='';current=null;
+    resumeBg();
+    if(!lb.classList.contains('open')){lenis?.start();document.body.classList.remove('no-scroll')}};
+  if(lite){const pl=pjC.querySelector('.pj-player');if(pl)pl.innerHTML='';
+    gsap.to(pj,{opacity:0,duration:S(.4),ease:'power2.out',overwrite:true,onComplete:done});}
+  else gsap.to(pj,{clipPath:'circle(0% at 50% 50%)',duration:S(.8),ease:'expo.inOut',onComplete:done});
 }
 function routeFromHash(){
   if(!introDone) return;
@@ -709,7 +736,9 @@ function routeFromHash(){
 function goProject(slug){const p=FILMS.find(x=>x.slug===slug);if(!p)return;
   try{history.pushState({pj:slug},'','#/phim/'+slug)}catch(e){}
   openProject(p);}
-document.addEventListener('click',e=>{const a=e.target.closest('a[href^="#/phim/"]');if(!a)return;e.preventDefault();goProject(a.getAttribute('href').split('/').pop())});
+document.addEventListener('click',e=>{const a=e.target.closest('a[href^="#/phim/"]');if(!a)return;e.preventDefault();
+  const th=a.querySelector('.wk-thumb'); zoomFrom=th?th.getBoundingClientRect():null;
+  goProject(a.getAttribute('href').split('/').pop())});
 addEventListener('hashchange',routeFromHash);
 addEventListener('popstate',routeFromHash);
 $('#pjBack').onclick=()=>{let pushed=false;try{pushed=!!(history.state&&history.state.pj)}catch(e){}
